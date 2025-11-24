@@ -50,6 +50,8 @@ class Turret(hardwareMap: HardwareMap, follower: Follower) {
         return angle
     }
 
+    val 
+
     val spin = Actors.Actor<State, Actions>(
         name = "Turret Spin",
         initializer = { State.CONTROLLED },

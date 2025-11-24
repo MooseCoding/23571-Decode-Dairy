@@ -10,5 +10,7 @@ class Outtake(hardwareMap: HardwareMap) {
     val turret = Turret(hardwareMap)
     val hood = Hood(hardwareMap)
 
-
+    val outtakeContinuation:Continuation = Continuations.exec {
+        
+    }.close()
 }

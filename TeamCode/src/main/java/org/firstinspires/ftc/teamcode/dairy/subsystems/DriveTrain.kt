@@ -11,13 +11,20 @@ import dev.frozenmilk.dairy.mercurial.continuations.Fiber
 import dev.frozenmilk.dairy.mercurial.continuations.registers.Register
 import dev.frozenmilk.dairy.mercurial.continuations.registers.ValRegister
 import kotlin.math.abs
+import com.pedropathing.follower.Follower
+import com.qualcomm.robotcore.external.Telemetry 
 import kotlin.math.max
 
-class DriveTrain(gamepad:Gamepad, hardwareMap: HardwareMap) {
+class DriveTrain(gamepad:Gamepad, hardwareMap: HardwareMap, telemetry:Telemetry) {
+    companion object {
+        var alliance: Alliance = Alliance.RED 
+    }
+
     private val fL: DcMotorEx = hardwareMap.dcMotor.get("frontLeft") as DcMotorEx
     private val fR: DcMotorEx = hardwareMap.dcMotor.get("frontRight") as DcMotorEx
     private val bL: DcMotorEx = hardwareMap.dcMotor.get("backLeft") as DcMotorEx
     private val bR: DcMotorEx = hardwareMap.dcMotor.get("backRight") as DcMotorEx
+    val follower = Constants.createFollower(hardwareMap)
 
     val driveContinuation:Continuation = Continuations.exec {
         val y = -gamepad.left_stick_y
@@ -33,18 +40,11 @@ class DriveTrain(gamepad:Gamepad, hardwareMap: HardwareMap) {
         fL.power = frontLeftPower
         bL.power = backLeftPower
         fR.power = frontRightPower
-        bR.power = backRightPower
+        bR.power = backRightPower'
+        
+        telemetry.addData("")
     }.close()
 
-    val driveFiber:Fiber = Fiber(
-        loop(
-            exec {
-                driveContinuation
-            }
-        ).close()
-    )
-
-    init {
-        Fiber.CANCEL(driveFiber)
+    val followerContinuation: Continuation = Continuations.exec {
     }
 }
