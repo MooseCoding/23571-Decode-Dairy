@@ -1,25 +1,24 @@
 package org.firstinspires.ftc.teamcode.dairy.subsystems.outtake
 
-import com.ThermalEquilibrium.homeostasis.Controllers.Feedback.BasicPID
-import com.ThermalEquilibrium.homeostasis.Controllers.Feedforward.BasicFeedforward
-import com.ThermalEquilibrium.homeostasis.Filters.Estimators.RawValue
-import com.ThermalEquilibrium.homeostasis.Parameters.FeedforwardCoefficients
-import com.ThermalEquilibrium.homeostasis.Parameters.PIDCoefficients
-import com.ThermalEquilibrium.homeostasis.Systems.BasicSystem
 import com.pedropathing.follower.Follower
 import com.qualcomm.robotcore.hardware.DcMotorEx
 import com.qualcomm.robotcore.hardware.HardwareMap
 import dev.frozenmilk.dairy.mercurial.continuations.Actors
 import dev.frozenmilk.dairy.mercurial.continuations.Continuations
+import dev.nextftc.control.KineticState
+import dev.nextftc.control.builder.controlSystem
+import dev.nextftc.control.feedback.PIDCoefficients
+import org.firstinspires.ftc.teamcode.dairy.subsystems.Alliance
 import kotlin.math.PI
 import kotlin.math.atan2
 
-class Turret(hardwareMap: HardwareMap, follower: Follower) {
-    val turretMotor: DcMotorEx = hardwareMap.dcMotor.get("turretMotor") as DcMotorEx
+class Turret(hardwareMap: HardwareMap, alliance: Alliance, follower: Follower) {
+    private val turretMotor: DcMotorEx = hardwareMap.dcMotor.get("turretMotor") as DcMotorEx
 
-    val pid: BasicPID = BasicPID(PIDCoefficients(0.0033, 0.0, 0.0))
-    val ff: BasicFeedforward = BasicFeedforward(FeedforwardCoefficients(1.66667E-4, 0.0, 0.003))
-    val turretSystem: BasicSystem = BasicSystem(RawValue{ turretMotor.currentPosition.toDouble() }, pid, ff)
+    private val turretPID = PIDCoefficients(2.0,0.0,0.2)
+    private val turretController = controlSystem {
+        posPid(turretPID)
+    }
 
     private val ppr = 537.7
     private val gearRatio = 3.47
@@ -32,10 +31,10 @@ class Turret(hardwareMap: HardwareMap, follower: Follower) {
 
     enum class Actions {
         STOP,
-        RELEASE
+        SPIN
     }
 
-    fun getYaw(input:Double): Double { // Get the current yaw of the turret from [-pi, pi]
+    fun getYaw(input: Int): Double { // Get the current yaw of the turret from [-pi, pi]
         return normalizeAngle(input * rpt)
     }
 
@@ -50,14 +49,14 @@ class Turret(hardwareMap: HardwareMap, follower: Follower) {
         return angle
     }
 
-    val 
+    private val goalY:Double = 136.0
+    private val goalX:Double = if(alliance==Alliance.RED) 138.0 else 6.0
 
     val spin = Actors.Actor<State, Actions>(
-        name = "Turret Spin",
-        initializer = { State.CONTROLLED },
+        initializer = { State.NOT_CONTROLLED },
         messageHandler = { _, message ->
             when(message) {
-                Actions.RELEASE -> {
+                Actions.SPIN -> {
                     State.CONTROLLED
                 }
                 Actions.STOP -> {
@@ -74,7 +73,8 @@ class Turret(hardwareMap: HardwareMap, follower: Follower) {
                         val deltaHeading = normalizeAngle(mu - follower.heading)
                         val clampedHeading = deltaHeading.coerceIn(-PI, PI)
 
-                        turretMotor.power = turretSystem.update(clampedHeading, 0.0)
+                        turretController.goal = KineticState(clampedHeading, 0.0)
+                        turretMotor.power = turretController.calculate(KineticState(getYaw(turretMotor.currentPosition), 0.0))
                     }
                     State.NOT_CONTROLLED -> {
                     }
